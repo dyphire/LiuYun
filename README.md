@@ -1,6 +1,6 @@
 # LiuYun
 
-LiuYun 是一个基于 WinUI 3 的 Windows 剪贴板管理工具，聚焦“便捷、安全、自由”。
+LiuYun 是一个基于 WinUI 3 的 Windows 剪贴板扩展工具，聚焦“便捷、安全、自由”。
 
 
 
