@@ -1,4 +1,4 @@
-# LiuYun Clipboard Manager
+# LiuYun
 
 LiuYun 是一个基于 WinUI 3 的 Windows 剪贴板管理工具，聚焦“便捷、安全、自由”。
 
