@@ -138,6 +138,8 @@ namespace LiuYun.Views
             _categoryFilter = ClipboardFilterState.Current;
             _filterStartTime = ClipboardTimeFilterState.StartTime;
             _filterEndTime = ClipboardTimeFilterState.EndTime;
+            // sync quick category dropdown selection
+            UpdateQuickFilterButtonVisual(_categoryFilter);
         }
 
         public void OnHostWindowVisibilityChanged(bool isVisible)
@@ -394,6 +396,18 @@ namespace LiuYun.Views
             OnPropertyChanged(nameof(ListModeToggleTooltip));
             OnPropertyChanged(nameof(FavoriteQuickButtonText));
             OnPropertyChanged(nameof(HistoryEmptyHintVisibility));
+            // show filter button only in history mode
+            try
+            {
+                if (QuickFilterButton != null)
+                {
+                    QuickFilterButton.Visibility = _currentListMode == ClipboardListMode.History ? Visibility.Visible : Visibility.Collapsed;
+                }
+            }
+            catch
+            {
+                // ignore if UI not ready
+            }
         }
 
         private void UpdateInlineFavoriteButtonText(Border deleteButton)
@@ -740,7 +754,27 @@ namespace LiuYun.Views
             {
                 RefreshFilteredItems();
                 UpdateCategoryFilterTooltip();
+                UpdateQuickFilterButtonVisual(filter);
             });
+        }
+
+        private void UpdateQuickFilterButtonVisual(ClipboardCategoryFilter filter)
+        {
+            try
+            {
+                if (QuickFilterGlyph != null && QuickFilterButton != null)
+                {
+                    var glyph = GetCategoryGlyph(filter);
+                    QuickFilterGlyph.Glyph = string.IsNullOrEmpty(glyph) ? "\uE71C" : glyph;
+                    QuickFilterButton.Opacity = filter == ClipboardCategoryFilter.All ? 1.0 : 0.95;
+                    // tooltip
+                    var label = GetCategoryFilterLabel(filter);
+                    ToolTipService.SetToolTip(QuickFilterButton, $"筛选: {label}");
+                }
+            }
+            catch
+            {
+            }
         }
 
         private void ClipboardTimeFilterState_FilterChanged(object? sender, EventArgs e)
@@ -1114,6 +1148,134 @@ namespace LiuYun.Views
         {
         }
 
+        private void QuickFilterButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var flyout = new Flyout();
+
+                // compute counts snapshot
+                var itemsSnapshot = clipboardModel?.Items ?? Enumerable.Empty<ClipboardItem>();
+                int cnt_all = itemsSnapshot.Count();
+                int cnt_text = itemsSnapshot.Count(i => i.ContentType == ClipboardContentType.Text);
+                int cnt_code = itemsSnapshot.Count(i => i.SemanticType == ClipboardSemanticType.Code);
+                int cnt_json = itemsSnapshot.Count(i => i.SemanticType == ClipboardSemanticType.Json);
+                int cnt_longNumber = itemsSnapshot.Count(i => i.SemanticType == ClipboardSemanticType.LongNumber);
+                int cnt_image = itemsSnapshot.Count(i => i.SemanticType == ClipboardSemanticType.Image);
+                int cnt_file = itemsSnapshot.Count(i => i.SemanticType == ClipboardSemanticType.FilePath);
+                int cnt_link = itemsSnapshot.Count(i => i.SemanticType == ClipboardSemanticType.Link);
+                int cnt_email = itemsSnapshot.Count(i => i.SemanticType == ClipboardSemanticType.Email);
+
+                var panel = new StackPanel { Orientation = Orientation.Vertical };
+
+                void addItem(ClipboardCategoryFilter f, string label)
+                {
+                    string suffix = f switch
+                    {
+                        ClipboardCategoryFilter.All => $" ({cnt_all})",
+                        ClipboardCategoryFilter.Text => $" ({cnt_text})",
+                        ClipboardCategoryFilter.Code => $" ({cnt_code})",
+                        ClipboardCategoryFilter.Json => $" ({cnt_json})",
+                        ClipboardCategoryFilter.LongNumber => $" ({cnt_longNumber})",
+                        ClipboardCategoryFilter.Image => $" ({cnt_image})",
+                        ClipboardCategoryFilter.File => $" ({cnt_file})",
+                        ClipboardCategoryFilter.Link => $" ({cnt_link})",
+                        ClipboardCategoryFilter.Email => $" ({cnt_email})",
+                        _ => string.Empty,
+                    };
+
+                    var item = new RadioButton { Tag = f, GroupName = "QuickFilterGroup" };
+
+                    // build content: Grid with icon | label | count (right-aligned)
+                    var grid = new Grid();
+                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                    var iconGlyph = GetCategoryGlyph(f);
+                    if (!string.IsNullOrEmpty(iconGlyph))
+                    {
+                        var iconEl = new FontIcon { Glyph = iconGlyph, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+                        Grid.SetColumn(iconEl, 0);
+                        grid.Children.Add(iconEl);
+                    }
+
+                    var labelText = new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) };
+                    Grid.SetColumn(labelText, 1);
+                    grid.Children.Add(labelText);
+
+                    var countText = new TextBlock { Text = suffix, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
+                    try
+                    {
+                        if (Application.Current != null && Application.Current.Resources.ContainsKey("TextFillColorSecondaryBrush"))
+                        {
+                            countText.Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+                        }
+                    }
+                    catch
+                    {
+                        // ignore resource lookup failures
+                    }
+                    Grid.SetColumn(countText, 2);
+                    grid.Children.Add(countText);
+
+                    item.Content = grid;
+                    item.IsChecked = ClipboardFilterState.Current == f;
+                    item.Checked += (_, __) =>
+                    {
+                        try
+                        {
+                            ClipboardFilterState.Current = f;
+                            flyout.Hide();
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"QuickFilter selection failed: {ex.Message}");
+                        }
+                    };
+
+                    panel.Children.Add(item);
+                }
+
+                addItem(ClipboardCategoryFilter.All, "全部");
+                addItem(ClipboardCategoryFilter.Text, "文本");
+                addItem(ClipboardCategoryFilter.Image, "图片");
+                addItem(ClipboardCategoryFilter.Link, "链接");
+                addItem(ClipboardCategoryFilter.Email, "邮箱");
+                addItem(ClipboardCategoryFilter.File, "文件");
+                addItem(ClipboardCategoryFilter.Code, "代码");
+                addItem(ClipboardCategoryFilter.Json, "JSON");
+                addItem(ClipboardCategoryFilter.LongNumber, "数字");
+
+                flyout.Content = panel;
+                if (sender is FrameworkElement fe)
+                {
+                    flyout.ShowAt(fe);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"QuickFilterButton_Click failed: {ex.Message}");
+            }
+        }
+
+        private static string GetCategoryGlyph(ClipboardCategoryFilter f)
+        {
+            return f switch
+            {
+                ClipboardCategoryFilter.All => "\uE71D",
+                ClipboardCategoryFilter.Text => "\uE8C8",
+                ClipboardCategoryFilter.Image => "\uE91B",
+                ClipboardCategoryFilter.Link => "\uE71B",
+                ClipboardCategoryFilter.Email => "\uE715",
+                ClipboardCategoryFilter.File => "\uE8B7",
+                ClipboardCategoryFilter.Code => "\uE943",
+                ClipboardCategoryFilter.Json => "\uE943",
+                ClipboardCategoryFilter.LongNumber => "\uE8C8",
+                _ => string.Empty,
+            };
+        }
+
         private async void ClipboardPage_KeyDown(object sender, KeyRoutedEventArgs e)
         {
             if (!_isHostWindowVisible || _isLoading || _isSubmittingKeyboardSelection)
@@ -1228,7 +1390,7 @@ namespace LiuYun.Views
                 timeText = $"<={_filterEndTime:MM-dd}";
             }
 
-            ToolTipService.SetToolTip(SettingsActionButton, $"分类: {categoryText} | 时间: {timeText}");
+            ToolTipService.SetToolTip(SettingsActionButton, "分类: " + categoryText + " | 时间: " + timeText);
         }
 
         private async void ClipboardPage_Loaded(object sender, RoutedEventArgs e)

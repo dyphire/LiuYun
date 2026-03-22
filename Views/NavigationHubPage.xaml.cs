@@ -33,12 +33,42 @@ namespace LiuYun.Views
 
             AttachClipboardItemsSubscription();
             RefreshCategoryCounts();
+            // subscribe to global filter changes so status line stays in sync
+            ClipboardFilterState.FilterChanged += ClipboardFilterState_FilterChanged;
+            // initialize status
+            UpdateStatusTextFromFilter();
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             DetachClipboardItemsSubscription();
+            // unsubscribe from global filter changes
+            ClipboardFilterState.FilterChanged -= ClipboardFilterState_FilterChanged;
             base.OnNavigatedFrom(e);
+        }
+
+        private void ClipboardFilterState_FilterChanged(object? sender, ClipboardCategoryFilter filter)
+        {
+            if (DispatcherQueue == null)
+            {
+                return;
+            }
+
+            _ = DispatcherQueue.TryEnqueue(() => UpdateStatusTextFromFilter());
+        }
+
+        private void UpdateStatusTextFromFilter()
+        {
+            try
+            {
+                var category = ClipboardFilterState.Current;
+                string categoryText = GetCategoryFilterLabel(category);
+
+                StatusText.Text = $"已应用筛选：分类 {categoryText}";
+            }
+            catch
+            {
+            }
         }
 
         private void BackButton_Click(object sender, RoutedEventArgs e)
