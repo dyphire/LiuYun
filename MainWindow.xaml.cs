@@ -515,7 +515,7 @@ namespace LiuYun
             }
         }
 
-        private void NavigateRoot(Type pageType)
+        internal void NavigateRoot(Type pageType)
         {
             if (rootFrame.Content?.GetType() == pageType)
             {

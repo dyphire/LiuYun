@@ -124,7 +124,7 @@ namespace LiuYun
             {
                 HideWindowForStartupLaunch();
             }
-            InitializeTrayIcon();
+            FireAndForget(InitializeTrayIconAsync(), nameof(InitializeTrayIconAsync));
             StartSingleInstanceActivationListener();
 
             _backgroundTaskQueue = new BackgroundTaskQueue(capacity: 1024, workerCount: 3);
@@ -454,7 +454,7 @@ namespace LiuYun
 
         public static Window? MainWindow => ((App)Current).m_window;
 
-        private void InitializeTrayIcon()
+        private async Task InitializeTrayIconAsync()
         {
             if (m_window is null)
             {
@@ -476,6 +476,69 @@ namespace LiuYun
                 {
                     ExitApplication();
                 };
+                service.ToggleStartupRequested += async (_, __) =>
+                {
+                    try
+                    {
+                        var startupService = new StartupService();
+                        var state = await startupService.GetStateAsync();
+                        StartupStateInfo newState;
+                        if (state.IsEnabled)
+                        {
+                            newState = await startupService.DisableAsync();
+                        }
+                        else
+                        {
+                            newState = await startupService.EnableAsync();
+                        }
+
+                        // Update menu checked state based on resulting state
+                        service.SetStartupChecked(newState.IsEnabled);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Toggle startup failed: {ex}");
+                    }
+                };
+                service.ClearHistoryRequested += async (_, __) =>
+                {
+                    try
+                    {
+                        if (ClipboardModel != null)
+                        {
+                            await ClipboardModel.ClearAllAsync();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Clear history failed: {ex}");
+                    }
+                };
+                service.OpenSettingsRequested += (_, __) =>
+                {
+                    try
+                    {
+                        ShowMainWindow();
+                        m_window?.DispatcherQueue.TryEnqueue(() => m_window.NavigateRoot(typeof(LiuYun.Views.SettingsPage)));
+                        FireAndForget(ForceActivateMainWindowAsync(), nameof(ForceActivateMainWindowAsync));
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Open settings failed: {ex}");
+                    }
+                };
+
+                // Initialize checked state from StartupService
+                try
+                {
+                    var startupService = new StartupService();
+                    var state = await startupService.GetStateAsync();
+                    service.SetStartupChecked(state.IsEnabled);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Failed to query startup state: {ex}");
+                }
 
                 _trayIconService = service;
             }

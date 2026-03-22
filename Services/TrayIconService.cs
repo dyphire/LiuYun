@@ -12,6 +12,7 @@ namespace LiuYun.Services
         private const int WM_LBUTTONDBLCLK = 0x0203;
         private const int WM_RBUTTONUP = 0x0205;
         private const int WM_CONTEXTMENU = 0x007B;
+        private const int WM_NULL = 0x0000;
         private const int WM_DESTROY = 0x0002;
 
         private const uint NIF_MESSAGE = 0x00000001;
@@ -25,8 +26,12 @@ namespace LiuYun.Services
         private const uint TPM_RIGHTALIGN = 0x00000008;
         private const uint TPM_RIGHTBUTTON = 0x00000002;
         private const uint TPM_RETURNCMD = 0x00000100;
+        private const uint MF_CHECKED = 0x00000008;
 
         private const int CommandExit = 1002;
+        private const int CommandToggleStartup = 1003;
+        private const int CommandClearHistory = 1004;
+        private const int CommandOpenSettings = 1005;
 
         private readonly IntPtr _windowHandle;
         private readonly ushort _iconId;
@@ -37,9 +42,13 @@ namespace LiuYun.Services
         private IntPtr _iconHandle;
         private IntPtr _menuHandle;
         private bool _disposed;
+        private bool _startupChecked;
 
         public event EventHandler? ShowRequested;
         public event EventHandler? ExitRequested;
+        public event EventHandler? ToggleStartupRequested;
+        public event EventHandler? ClearHistoryRequested;
+        public event EventHandler? OpenSettingsRequested;
 
         public TrayIconService(IntPtr windowHandle)
         {
@@ -103,7 +112,8 @@ namespace LiuYun.Services
 
         private void HandleTrayMessage(IntPtr lParam)
         {
-            int message = (int)lParam;
+            int raw = (int)lParam;
+            int message = raw & 0xFFFF;
             switch (message)
             {
                 case WM_LBUTTONUP:
@@ -119,15 +129,23 @@ namespace LiuYun.Services
 
         private void ShowContextMenu()
         {
-            if (_menuHandle == IntPtr.Zero)
+            // Recreate menu every time so dynamic checked state is reflected.
+            if (_menuHandle != IntPtr.Zero)
             {
-                _menuHandle = CreatePopupMenu();
-                AppendMenu(_menuHandle, 0, CommandExit, "退出");
+                DestroyMenu(_menuHandle);
+                _menuHandle = IntPtr.Zero;
             }
+
+            _menuHandle = CreatePopupMenu();
+            uint startupFlags = _startupChecked ? MF_CHECKED : 0u;
+            AppendMenu(_menuHandle, startupFlags, CommandToggleStartup, "开机自启动");
+            AppendMenu(_menuHandle, 0, CommandClearHistory, "清空历史记录");
+            AppendMenu(_menuHandle, 0, CommandOpenSettings, "设置");
+            AppendMenu(_menuHandle, 0, CommandExit, "退出");
 
             GetCursorPos(out POINT cursorPos);
 
-            IntPtr popupOwner = IsWindowVisible(_windowHandle) ? _windowHandle : GetDesktopWindow();
+            IntPtr popupOwner = _windowHandle;
             SetForegroundWindow(popupOwner);
             int commandId = TrackPopupMenu(
                 _menuHandle,
@@ -138,10 +156,36 @@ namespace LiuYun.Services
                 popupOwner,
                 IntPtr.Zero);
 
+            _ = PostMessage(popupOwner, (uint)WM_NULL, IntPtr.Zero, IntPtr.Zero);
+
             if (commandId == CommandExit)
             {
                 ExitRequested?.Invoke(this, EventArgs.Empty);
             }
+            else if (commandId == CommandToggleStartup)
+            {
+                ToggleStartupRequested?.Invoke(this, EventArgs.Empty);
+            }
+            else if (commandId == CommandClearHistory)
+            {
+                ClearHistoryRequested?.Invoke(this, EventArgs.Empty);
+            }
+            else if (commandId == CommandOpenSettings)
+            {
+                OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
+            }
+
+            // Destroy the menu after use to ensure next open reflects current state
+            if (_menuHandle != IntPtr.Zero)
+            {
+                DestroyMenu(_menuHandle);
+                _menuHandle = IntPtr.Zero;
+            }
+        }
+
+        public void SetStartupChecked(bool isChecked)
+        {
+            _startupChecked = isChecked;
         }
 
         private static (IntPtr Handle, bool OwnsHandle) LoadApplicationIcon()
@@ -281,5 +325,7 @@ namespace LiuYun.Services
         [DllImport("user32.dll")]
         private static extern IntPtr GetDesktopWindow();
 
+        [DllImport("user32.dll")]
+        private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
     }
 }
