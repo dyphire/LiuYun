@@ -18,6 +18,8 @@ namespace LiuYun.Services
         private const uint NIF_MESSAGE = 0x00000001;
         private const uint NIF_ICON = 0x00000002;
         private const uint NIF_TIP = 0x00000004;
+        private const uint NIF_INFO = 0x00000010;
+        private const uint NIM_MODIFY = 0x00000001;
         private const uint NIM_ADD = 0x00000000;
         private const uint NIM_DELETE = 0x00000002;
         private const uint NIM_SETVERSION = 0x00000004;
@@ -186,6 +188,26 @@ namespace LiuYun.Services
         public void SetStartupChecked(bool isChecked)
         {
             _startupChecked = isChecked;
+        }
+
+        public void ShowInfoTip(string title, string message)
+        {
+            try
+            {
+                NOTIFYICONDATA data = CreateNotifyIconData();
+                // Ensure the info flag is set so balloon is displayed
+                data.uFlags |= NIF_INFO;
+                data.szInfoTitle = title ?? string.Empty;
+                data.szInfo = message ?? string.Empty;
+                data.dwInfoFlags = 0; // NIIF_NONE
+
+                // Modify the existing icon entry to display the balloon tip
+                Shell_NotifyIcon(NIM_MODIFY, ref data);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to show info tip: {ex}");
+            }
         }
 
         private static (IntPtr Handle, bool OwnsHandle) LoadApplicationIcon()

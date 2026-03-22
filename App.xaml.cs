@@ -119,11 +119,10 @@ namespace LiuYun
                 DisposeTrayIcon();
                 Exit();
             };
-            m_window.Activate();
-            if (_isStartupLaunch)
-            {
-                HideWindowForStartupLaunch();
-            }
+            // Always start hidden by default; user can open via hotkey or tray icon.
+            // For startup launches we already treat as silent. For non-startup launches
+            // we also keep the window hidden and will show a brief tray notification.
+            HideWindowForStartupLaunch();
             FireAndForget(InitializeTrayIconAsync(), nameof(InitializeTrayIconAsync));
             StartSingleInstanceActivationListener();
 
@@ -391,13 +390,9 @@ namespace LiuYun
 
             CacheRootVisual();
 
-            if (_isStartupLaunch)
-            {
-                return;
-            }
-
-            ShowMainWindow();
-            await ForceActivateMainWindowAsync();
+            // For non-startup (manual) launches we intentionally keep the window hidden
+            // and rely on the tray/info tip and hotkeys to open the UI.
+            return;
         }
 
         private void HideWindowForStartupLaunch()
@@ -541,6 +536,18 @@ namespace LiuYun
                 }
 
                 _trayIconService = service;
+                // If this was a normal (non-startup) launch, inform the user the app is running minimized.
+                try
+                {
+                    if (!_isStartupLaunch)
+                    {
+                        service.ShowInfoTip("LiuYun", "LiuYun 正以最小化方式运行，可通过热键或单击任务栏图标打开");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Failed to show startup info tip: {ex}");
+                }
             }
             catch (Exception ex)
             {
@@ -2011,8 +2018,8 @@ namespace LiuYun
             {
                 var diagnostics = HotkeyDiagnosticsService.RunDiagnostics();
                 message += $"=== 诊断信息 ==={Environment.NewLine}";
-                message += $"管理员权限: {(diagnostics.IsRunningAsAdmin ? "是" : "否")}{Environment.NewLine}";
-                message += $"系统剪贴板历史: {(diagnostics.ClipboardHistoryEnabled ? "已启用(占用Win+V)" : "已禁用")}{Environment.NewLine}{Environment.NewLine}";
+                message += "管理员权限: " + (diagnostics.IsRunningAsAdmin ? "是" : "否") + Environment.NewLine;
+                message += "系统剪贴板历史: " + (diagnostics.ClipboardHistoryEnabled ? "已启用(占用Win+V)" : "已禁用") + Environment.NewLine + Environment.NewLine;
             }
 
             message += "应用将继续运行，但快捷键在本次会话中不可用。";
