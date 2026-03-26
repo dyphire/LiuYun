@@ -1487,11 +1487,6 @@ namespace LiuYun.Views
             Frame.Navigate(typeof(NavigationHubPage), isFavoriteMode);
         }
 
-        private void OpenEmojiPageButton_Click(object sender, RoutedEventArgs e)
-        {
-            Frame.Navigate(typeof(EmojiPage));
-        }
-
         private void UpdateTimeFilterLabel()
         {
             UpdateSettingsActionTooltip();
