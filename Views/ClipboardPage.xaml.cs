@@ -45,6 +45,7 @@ namespace LiuYun.Views
         private bool _isLoading = false;
         private Microsoft.UI.Xaml.Media.Animation.Storyboard? _currentDeleteStoryboard;
         private bool _isHostWindowVisible = true;
+        private bool _isWindowPinned = false;
         private bool _pendingRefreshWhileHidden;
         private ClipboardItem? _keyboardSelectedItem;
         private bool _isSubmittingKeyboardSelection;
@@ -88,6 +89,52 @@ namespace LiuYun.Views
             _filterStartTime = ClipboardTimeFilterState.StartTime;
             _filterEndTime = ClipboardTimeFilterState.EndTime;
             AttachPageSubscriptions();
+        }
+
+        private void PinToggleButton_Click(object sender, RoutedEventArgs e)
+        {
+            _isWindowPinned = !_isWindowPinned;
+
+            if (App.Current is App app)
+            {
+                try
+                {
+                    app.IsClipboardPinned = _isWindowPinned;
+                    if (_isWindowPinned)
+                    {
+                        app.BeginAutoHideSuppression();
+                        app.CaptureInvocationWindowFromCurrentForeground();
+                    }
+                    else
+                    {
+                        app.EndAutoHideSuppression();
+                    }
+
+                    try
+                    {
+                        if (app.m_window is MainWindow mainWindow)
+                        {
+                            mainWindow.SetTopMost(_isWindowPinned);
+                        }
+                    }
+                    catch { }
+                }
+                catch { }
+            }
+            ApplyPinVisuals(_isWindowPinned);
+        }
+
+        private void SyncPinButtonFromAppState()
+        {
+            try
+            {
+                if (App.Current is App app)
+                {
+                    _isWindowPinned = app.IsClipboardPinned;
+                    ApplyPinVisuals(_isWindowPinned);
+                }
+            }
+            catch { }
         }
 
         private void AttachPageSubscriptions()
@@ -175,8 +222,56 @@ namespace LiuYun.Views
             }
             else
             {
+                if (_isWindowPinned)
+                {
+                    ResetPinStateToDefault();
+                }
                 EnterBackgroundMemorySavingMode();
             }
+        }
+
+        private void ResetPinStateToDefault()
+        {
+            try
+            {
+                _isWindowPinned = false;
+                ApplyPinVisuals(false);
+
+                if (App.Current is App app)
+                {
+                    try
+                    {
+                        app.IsClipboardPinned = false;
+                        app.EndAutoHideSuppression();
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+        }
+
+        private void ApplyPinVisuals(bool pinned)
+        {
+            try
+            {
+                // button background + opacity + tooltip
+                if (PinToggleButton != null && Application.Current != null && Application.Current.Resources != null)
+                {
+                    var bgKey = pinned ? "AccentFillColorDefaultBrush" : "CardBackgroundFillColorDefaultBrush";
+                    if (Application.Current.Resources.ContainsKey(bgKey))
+                    {
+                        PinToggleButton.Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources[bgKey];
+                    }
+                    else
+                    {
+                        PinToggleButton.Background = pinned ? new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE5, 0xE5, 0xE5)) : null;
+                    }
+
+                    PinToggleButton.Opacity = pinned ? 0.95 : 1.0;
+                    try { ToolTipService.SetToolTip(PinToggleButton, pinned ? "已钉住：启用后粘贴不会自动隐藏窗口" : "钉住：启用后粘贴不会自动隐藏窗口"); } catch { }
+                }
+            }
+            catch { }
         }
 
         private void EnterBackgroundMemorySavingMode()
@@ -1467,6 +1562,9 @@ namespace LiuYun.Views
             {
                 _ = WarmupFavoriteItemsAsync();
             }
+
+            // sync pin button visual with app state
+            SyncPinButtonFromAppState();
 
             if (model.IsLoaded)
             {

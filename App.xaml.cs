@@ -75,6 +75,7 @@ namespace LiuYun
         private Task? _singleInstanceActivateListenerTask;
         public AutoPasteFallbackReason LastAutoPasteFallbackReason { get; private set; } = AutoPasteFallbackReason.None;
         public bool AutoHideOnDeactivate { get; private set; } = true;
+        public bool IsClipboardPinned { get; set; } = false;
         public bool IsMainWindowVisible => !_isWindowHidden;
 
         public enum AutoPasteFallbackReason
@@ -982,12 +983,43 @@ namespace LiuYun
             _capturedInvocationWindow = foreground;
         }
 
+        public void CaptureInvocationWindowFromCurrentForeground()
+        {
+            if (m_window is null)
+            {
+                return;
+            }
+
+            IntPtr foreground = GetForegroundWindow();
+            if (foreground == IntPtr.Zero || !IsWindow(foreground))
+            {
+                return;
+            }
+
+            IntPtr self = WindowNative.GetWindowHandle(m_window);
+            if (foreground == self || IsCurrentProcessWindow(foreground) || IsShellOrDesktopWindow(foreground))
+            {
+                return;
+            }
+
+            _capturedInvocationWindow = foreground;
+            _capturedInvocationFocusWindow = GetFocusedWindowForActive(foreground);
+        }
+
         public async Task<bool> TryAutoPasteToCapturedTargetAsync()
         {
             LastAutoPasteFallbackReason = AutoPasteFallbackReason.None;
 
             IntPtr target = _capturedInvocationWindow;
             IntPtr focus = _capturedInvocationFocusWindow;
+
+            if (IsClipboardPinned && (target == IntPtr.Zero || !IsWindow(target) || IsCurrentProcessWindow(target) || IsShellOrDesktopWindow(target)))
+            {
+                // If pinned and captured target is invalid or unset, refresh from current foreground window as a best-effort target.
+                CaptureInvocationWindowFromCurrentForeground();
+                target = _capturedInvocationWindow;
+                focus = _capturedInvocationFocusWindow;
+            }
 
             if (target == IntPtr.Zero)
             {
@@ -1043,8 +1075,12 @@ namespace LiuYun
                 return false;
             }
 
-            _capturedInvocationWindow = IntPtr.Zero;
-            _capturedInvocationFocusWindow = IntPtr.Zero;
+            if (!IsClipboardPinned)
+            {
+                _capturedInvocationWindow = IntPtr.Zero;
+                _capturedInvocationFocusWindow = IntPtr.Zero;
+            }
+
             return true;
         }
 
@@ -1495,6 +1531,12 @@ namespace LiuYun
 
         public async Task TriggerWindowHideAsync()
         {
+            // If clipboard UI is pinned, do not hide the main window.
+            if (IsClipboardPinned)
+            {
+                return;
+            }
+
             if (m_window is null || _isWindowHidden)
             {
                 return;

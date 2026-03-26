@@ -269,9 +269,18 @@ namespace LiuYun
 
             if (args.WindowActivationState == WindowActivationState.Deactivated)
             {
-                if (App.Current is App app && app.m_window == this && app.AutoHideOnDeactivate)
+                if (App.Current is App app && app.m_window == this)
                 {
-                    _ = app.TriggerWindowHideAsync();
+                    if (app.IsClipboardPinned)
+                    {
+                        // Keep clipboard pinned but allow automatic target switch to the newly activated window.
+                        app.CaptureInvocationWindowFromCurrentForeground();
+                    }
+
+                    if (app.AutoHideOnDeactivate)
+                    {
+                        _ = app.TriggerWindowHideAsync();
+                    }
                 }
             }
         }
@@ -790,6 +799,22 @@ namespace LiuYun
 
             SetWindowPos(hWnd, IntPtr.Zero, 0, 0, 0, 0,
                 SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+        }
+
+        // Make the window top-most or restore normal z-order
+        public void SetTopMost(bool topMost)
+        {
+            try
+            {
+                IntPtr hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+                IntPtr insertAfter = topMost ? new IntPtr(-1) : new IntPtr(-2);
+                uint flags = (uint)(SWP_NOSIZE | SWP_NOMOVE);
+                SetWindowPos(hWnd, insertAfter, 0, 0, 0, 0, flags);
+            }
+            catch
+            {
+                // ignore failures
+            }
         }
 
         private static double GetDpiScale(IntPtr hWnd)

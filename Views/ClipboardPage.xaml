@@ -407,6 +407,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <AutoSuggestBox Grid.Column="0"
@@ -443,7 +444,22 @@
                 </Button>
             </StackPanel>
 
-        <Button Grid.Column="2"
+        <Button x:Name="PinToggleButton"
+                        Grid.Column="2"
+                        Width="30"
+                        Height="30"
+                        Padding="0"
+                        Click="PinToggleButton_Click"
+                        VerticalAlignment="Center"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{StaticResource OverlayCornerRadius}"
+                        ToolTipService.ToolTip="钉住：启用后粘贴不会自动隐藏窗口">
+                <FontIcon x:Name="PinGlyph" Glyph="&#xE718;" FontSize="12"/>
+            </Button>
+
+        <Button Grid.Column="3"
                     Width="30"
                     Height="30"
                     Padding="0"
@@ -457,7 +473,7 @@
             </Button>
 
             <Button x:Name="SettingsActionButton"
-                    Grid.Column="3"
+                    Grid.Column="4"
                     Width="30"
                     Height="30"
                     Padding="0"
