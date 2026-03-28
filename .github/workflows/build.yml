@@ -1,0 +1,72 @@
+name: .NET Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        configuration: [Release]
+        platform: [x64]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore LiuYun.sln
+
+      - name: Build
+        run: dotnet build LiuYun.sln --configuration ${{ matrix.configuration }} --no-restore /p:Platform=${{ matrix.platform }}
+
+      - name: Publish app
+        run: |
+          dotnet publish LiuYun.sln --configuration ${{ matrix.configuration }} --no-restore /p:Platform=${{ matrix.platform }} --self-contained false /p:UseAppHost=true
+
+      - name: Install Inno Setup
+        if: runner.os == 'Windows'
+        run: choco install innosetup -y
+
+      - name: Get project version
+        id: version
+        run: |
+          $version = (Select-String -Path LiuYun.csproj -Pattern '<Version>(.+?)</Version>' -AllMatches).Matches[0].Groups[1].Value
+          if (-not $version) { throw 'Cannot find <Version> in LiuYun.csproj' }
+          Write-Host "Project version: $version"
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding ascii -Append
+
+      - name: Generate installer with Inno Setup
+        if: runner.os == 'Windows'
+        run: |
+          iscc /dBuildArch=${{ matrix.platform }} /dBuildConfig=${{ matrix.configuration }} /dAppVersion=${{ steps.version.outputs.version }} LiuYun.installer.iss
+
+      - name: Upload LiuYun artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiuYun
+          path: |
+            **/bin/${{ matrix.platform }}/${{ matrix.configuration }}/net8.0-windows10.0.19041.0/LiuYun*
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: liuyun-installer
+          path: dist/LiuYun_${{ steps.version.outputs.version }}_${{ matrix.platform }}-setup.exe
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: liuyun-build
+          path: |
+            **/bin/${{ matrix.platform }}/${{ matrix.configuration }}/net8.0-windows10.0.19041.0/publish/*

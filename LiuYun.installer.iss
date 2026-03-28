@@ -1,5 +1,7 @@
 #define AppName "LiuYun"
-#define AppVersion "2.0.0"
+#ifndef AppVersion
+  #define AppVersion "2.0.1"
+#endif
 #define AppPublisher "Losst"
 #define AppExeName "LiuYun.exe"
 #define ProjectRoot AddBackslash(SourcePath)
@@ -18,7 +20,7 @@
   #error BuildArch must be x64 or x86.
 #endif
 
-#define BuildDir ProjectRoot + "bin\\" + BuildArch + "\\" + BuildConfig + "\\net8.0-windows10.0.19041.0\\" + RuntimeId + "\\publish"
+#define BuildDir ProjectRoot + "bin\\" + BuildArch + "\\" + BuildConfig + "\\net8.0-windows10.0.19041.0\\" + "\\publish"
 #define IconFile ProjectRoot + "Assets\\LiuYun.ico"
 
 [Setup]
@@ -32,7 +34,7 @@ DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 AllowNoIcons=yes
 OutputDir={#ProjectRoot}dist
-OutputBaseFilename=LiuYun_2.0.0_{#BuildArch}-setup
+OutputBaseFilename=LiuYun_{#AppVersion}_{#BuildArch}-setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -46,9 +48,6 @@ UninstallDisplayIcon={app}\{#AppExeName}
 ShowLanguageDialog=no
 LanguageDetectionMethod=none
 UsePreviousLanguage=no
-
-[Languages]
-Name: "chinesesimp"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
