@@ -507,16 +507,11 @@ namespace LiuYun
             }
 
             ClipboardButton.Background = transparentBrush;
-            EmojiButton.Background = transparentBrush;
             SettingsButton.Background = transparentBrush;
 
             if (pageType == typeof(LiuYun.Views.ClipboardPage))
             {
                 ClipboardButton.Background = highlightBrush;
-            }
-            else if (pageType == typeof(LiuYun.Views.EmojiPage))
-            {
-                EmojiButton.Background = highlightBrush;
             }
             else if (pageType == typeof(LiuYun.Views.SettingsPage))
             {
@@ -549,11 +544,6 @@ namespace LiuYun
         private void ClipboardButton_Click(object sender, RoutedEventArgs e)
         {
             NavigateRoot(typeof(LiuYun.Views.ClipboardPage));
-        }
-
-        private void EmojiButton_Click(object sender, RoutedEventArgs e)
-        {
-            NavigateRoot(typeof(LiuYun.Views.EmojiPage));
         }
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)

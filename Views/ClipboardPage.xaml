@@ -407,7 +407,6 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <AutoSuggestBox Grid.Column="0"
@@ -459,18 +458,6 @@
                 <FontIcon x:Name="PinGlyph" Glyph="&#xE718;" FontSize="12"/>
             </Button>
 
-        <Button Grid.Column="3"
-                    Width="30"
-                    Height="30"
-                    Padding="0"
-                    Click="OpenEmojiPageButton_Click"
-                    VerticalAlignment="Center"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="{StaticResource OverlayCornerRadius}">
-                <FontIcon Glyph="&#xE899;" FontSize="12"/>
-            </Button>
 
             <Button x:Name="SettingsActionButton"
                     Grid.Column="4"
