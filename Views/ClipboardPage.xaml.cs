@@ -32,11 +32,11 @@ namespace LiuYun.Views
             Favorite
         }
 
-        private const int ClipboardLoadLimit = 300;
+        private const int ClipboardLoadLimit = 999;
         private const double InlineActionPanelOffset = 112;
         private const int InlineActionAnimationMs = 180;
         private const string FavoriteImageFolderName = "favorite_images";
-        private const int FavoriteItemsLoadLimit = 300;
+        private const int FavoriteItemsLoadLimit = 999;
         private AllClipboardItems clipboardModel => App.ClipboardModel;
         private Border? _currentOpenDeleteButton = null;
         private Border? _currentOpenMainCard = null;

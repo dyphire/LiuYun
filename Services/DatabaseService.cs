@@ -10,9 +10,9 @@ namespace LiuYun.Services
 {
     public static class DatabaseService
     {
-        private const int MaxClipboardHistoryItems = 300;
+        private const int MaxClipboardHistoryItems = 999;
         private const int ClipboardPruneBatchSize = 60;
-        private const int DefaultQueryLimit = 300;
+        private const int DefaultQueryLimit = 999;
 
         private static string? _dbPath;
         private static string? _appFolder;

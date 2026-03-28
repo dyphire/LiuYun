@@ -42,7 +42,7 @@ namespace LiuYun
         private readonly TimeSpan _activeWindowRetryDelay = TimeSpan.FromMilliseconds(36);
         private const int ActiveWindowActivationRetries = 4;
         private const float WindowAnimationOffset = 12f;
-        private const int ClipboardPreloadLimit = 300;
+        private const int ClipboardPreloadLimit = 999;
         public const int CursorPlacementOffsetPx = 8;
         private const string StartupLaunchArgument = "--startup";
         private const string SingleInstanceMutexName = @"Local\LiuYun.SingleInstance.Mutex";

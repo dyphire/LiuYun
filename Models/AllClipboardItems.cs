@@ -12,7 +12,7 @@ namespace LiuYun.Models
 {
     public class AllClipboardItems : IDisposable
     {
-        private const int MaxClipboardItems = 300;
+        private const int MaxClipboardItems = 999;
         public ObservableCollection<ClipboardItem> Items { get; set; } = new ObservableCollection<ClipboardItem>();
 
         public bool IsLoaded { get; set; } = false;

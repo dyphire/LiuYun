@@ -37,7 +37,7 @@ namespace LiuYun.Services
         private readonly DispatcherQueue _dispatcherQueue;
         private AllClipboardItems? _clipboardModel;
         private int _disposed = 0;
-        private const int MaxHistoryItems = 300;
+        private const int MaxHistoryItems = 999;
         private const int MaxTextSizeBytes = 512 * 1024;
         private const int MaxImageSizeBytes = 20 * 1024 * 1024;
         private static readonly HashSet<string> ImageFileExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
